@@ -1131,6 +1131,407 @@ def _add_thread(root, p):
             "body": body.name, "face": face_index, "internal": is_internal}
 
 
+# ---- Surface Modeling ----
+
+def _patch_surface(root, p):
+    sketch = _resolve_sketch(root, p)
+    if sketch.profiles.count == 0:
+        return {"error": "No profile in sketch for patch."}
+    pidx = min(int(p.get("profile_index", 0)), sketch.profiles.count - 1)
+    profile = sketch.profiles.item(pidx)
+    pi = root.features.patchFeatures.createInput(profile)
+    feat = root.features.patchFeatures.add(pi)
+    return {"patched": sketch.name, "bodies": root.bRepBodies.count}
+
+def _stitch_surfaces(root, p):
+    tool_bodies = adsk.core.ObjectCollection.create()
+    for ti in p.get("tool_bodies", []):
+        tool_bodies.add(_find_body(root, ti))
+    tolerance = float(p.get("tolerance", 0.01))
+    si = root.features.stitchFeatures.createInput()
+    si.stitchSurfaces = tool_bodies
+    si.tolerance = tolerance
+    feat = root.features.stitchFeatures.add(si)
+    return {"stitched": feat.bodies.count, "tolerance": tolerance}
+
+def _trim_surface(root, p):
+    body = _find_body(root, p.get("body", 0))
+    cutting_tool = _find_body(root, p.get("cutting_body", 1))
+    is_remove_both = _to_bool(p.get("remove_both", False))
+    faces = adsk.core.ObjectCollection.create()
+    for fi in p.get("face_indices", [0]):
+        faces.add(body.faces.item(int(fi)))
+    ti = root.features.trimFeatures.createInput(cutting_tool, faces)
+    ti.isRemoveBothSides = is_remove_both
+    feat = root.features.trimFeatures.add(ti)
+    return {"trimmed": body.name}
+
+def _extend_surface(root, p):
+    body = _find_body(root, p.get("body", 0))
+    face_index = int(p.get("face_index", 0))
+    face = body.faces.item(face_index)
+    distance = float(p.get("distance", 1.0))
+    ei = root.features.extendFeatures.createInput(face, distance, adsk.fusion.SurfaceExtendTypes.NaturalSurfaceExtendType)
+    feat = root.features.extendFeatures.add(ei)
+    return {"extended": body.name, "face": face_index, "distance_cm": distance}
+
+def _offset_surface(root, p):
+    body = _find_body(root, p.get("body", 0))
+    distance = float(p.get("distance", 1.0))
+    faces = adsk.core.ObjectCollection.create()
+    for fi in p.get("face_indices", [0]):
+        faces.add(body.faces.item(int(fi)))
+    oi = root.features.offsetFeatures.createInput(
+        adsk.core.ValueInput.createByReal(distance), faces, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    feat = root.features.offsetFeatures.add(oi)
+    return {"offset": body.name, "distance_cm": distance, "bodies": root.bRepBodies.count}
+
+def _delete_face(root, p):
+    body = _find_body(root, p.get("body", 0))
+    face_indices = p.get("face_indices", [0])
+    faces = adsk.core.ObjectCollection.create()
+    for fi in face_indices:
+        faces.add(body.faces.item(int(fi)))
+    di = root.features.deleteFaceFeatures.createInput(faces, adsk.fusion.DeleteFaceFeatureOptions.TangentDeleteFaceOption)
+    feat = root.features.deleteFaceFeatures.add(di)
+    return {"deleted_faces": face_indices, "body": body.name}
+
+def _replace_face(root, p):
+    body = _find_body(root, p.get("body", 0))
+    face_index = int(p.get("face_index", 0))
+    replacement_body = _find_body(root, p.get("replacement_body", 1))
+    face = body.faces.item(face_index)
+    ri = root.features.replaceFaceFeatures.createInput(face, replacement_body, True)
+    feat = root.features.replaceFaceFeatures.add(ri)
+    return {"replaced_face": face_index, "on_body": body.name}
+
+def _thicken_surface(root, p):
+    body = _find_body(root, p.get("body", 0))
+    thickness = float(p.get("thickness", 0.5))
+    faces = adsk.core.ObjectCollection.create()
+    for fi in p.get("face_indices", []):
+        faces.add(body.faces.item(int(fi)))
+    if faces.count == 0:
+        # Thicken all faces
+        for i in range(body.faces.count):
+            faces.add(body.faces.item(i))
+    ti = root.features.thickenFeatures.createInput(
+        faces, adsk.core.ValueInput.createByReal(thickness),
+        adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    feat = root.features.thickenFeatures.add(ti)
+    return {"thickened": body.name, "thickness_cm": thickness}
+
+
+# ---- Enhanced Features ----
+
+def _split_face(root, p):
+    body = _find_body(root, p.get("body", 0))
+    face_index = int(p.get("face_index", 0))
+    sketch = _resolve_sketch(root, p)
+    if sketch.profiles.count == 0:
+        return {"error": "No profile in sketch to split face."}
+    pidx = min(int(p.get("profile_index", 0)), sketch.profiles.count - 1)
+    profile = sketch.profiles.item(pidx)
+    face = body.faces.item(face_index)
+    si = root.features.splitFaceFeatures.createInput(face, profile)
+    feat = root.features.splitFaceFeatures.add(si)
+    return {"split_face": face_index, "body": body.name}
+
+def _split_body(root, p):
+    body = _find_body(root, p.get("body", 0))
+    cutting_body = _find_body(root, p.get("cutting_body", 1))
+    bodies_col = adsk.core.ObjectCollection.create()
+    bodies_col.add(body)
+    si = root.features.splitBodyFeatures.createInput(bodies_col, cutting_body)
+    feat = root.features.splitBodyFeatures.add(si)
+    return {"split": body.name, "result_bodies": feat.bodies.count}
+
+def _create_rib(root, p):
+    sketch = _resolve_sketch(root, p)
+    if sketch.profiles.count == 0:
+        return {"error": "No profile in sketch for rib."}
+    pidx = min(int(p.get("profile_index", 0)), sketch.profiles.count - 1)
+    profile = sketch.profiles.item(pidx)
+    thickness = float(p.get("thickness", 0.5))
+    is_symmetric = _to_bool(p.get("symmetric", False))
+    direction = int(p.get("direction", 0))  # 0=one side, 1=both sides
+    ri = root.features.ribFeatures.createInput(profile, adsk.core.ValueInput.createByReal(thickness), direction)
+    feat = root.features.ribFeatures.add(ri)
+    return {"rib": sketch.name, "thickness_cm": thickness}
+
+def _create_web(root, p):
+    sketch = _resolve_sketch(root, p)
+    if sketch.profiles.count == 0:
+        return {"error": "No profile in sketch for web."}
+    pidx = min(int(p.get("profile_index", 0)), sketch.profiles.count - 1)
+    profile = sketch.profiles.item(pidx)
+    thickness = float(p.get("thickness", 0.5))
+    wi = root.features.webFeatures.createInput(profile, adsk.core.ValueInput.createByReal(thickness))
+    feat = root.features.webFeatures.add(wi)
+    return {"web": sketch.name, "thickness_cm": thickness}
+
+def _variable_fillet(root, p):
+    body = _find_body(root, p.get("body", 0))
+    edge_indices = p.get("edge_indices", [0])
+    start_radius = float(p.get("start_radius", 0.5))
+    end_radius = float(p.get("end_radius", 1.0))
+    edges = adsk.core.ObjectCollection.create()
+    for ei in edge_indices:
+        edges.add(body.edges.item(int(ei)))
+    fi = root.features.filletFeatures.createInput()
+    fi.addVariableRadiusEdgeSet(edges,
+        adsk.core.ValueInput.createByReal(start_radius),
+        adsk.core.ValueInput.createByReal(end_radius), True)
+    feat = root.features.filletFeatures.add(fi)
+    return {"variable_fillet": body.name, "start_radius": start_radius, "end_radius": end_radius}
+
+def _emboss(root, p):
+    sketch = _resolve_sketch(root, p)
+    body = _find_body(root, p.get("body", 0))
+    if sketch.profiles.count == 0:
+        return {"error": "No profile in sketch for emboss."}
+    pidx = min(int(p.get("profile_index", 0)), sketch.profiles.count - 1)
+    profile = sketch.profiles.item(pidx)
+    depth = float(p.get("depth", 0.5))
+    ei = root.features.embossFeatures.createInput(profile, body)
+    ei.depth = adsk.core.ValueInput.createByReal(depth)
+    feat = root.features.embossFeatures.add(ei)
+    return {"embossed": body.name, "depth_cm": depth}
+
+
+# ---- Import ----
+
+def _import_step(p):
+    path = p.get("path", "")
+    if not path:
+        return {"error": "No file path provided."}
+    if not os.path.exists(path):
+        return {"error": f"File not found: {path}"}
+    import_mgr = app.importManager
+    step_options = import_mgr.createSTEPImportOptions(path)
+    imported = import_mgr.importToNewDocument(step_options)
+    if imported:
+        return {"imported": os.path.basename(path), "document": imported.name}
+    return {"error": "Import failed."}
+
+def _import_mesh(p):
+    path = p.get("path", "")
+    if not path:
+        return {"error": "No file path provided."}
+    if not os.path.exists(path):
+        return {"error": f"File not found: {path}"}
+    import_mgr = app.importManager
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".stl":
+        options = import_mgr.createSTLImportOptions(path)
+    elif ext == ".obj":
+        options = import_mgr.createOBJImportOptions(path)
+    elif ext == ".3mf":
+        options = import_mgr.createC3MFImportOptions(path)
+    else:
+        return {"error": f"Unsupported mesh format: {ext}. Use STL, OBJ, or 3MF."}
+    imported = import_mgr.importToNewDocument(options)
+    if imported:
+        return {"imported": os.path.basename(path), "document": imported.name}
+    return {"error": "Import failed."}
+
+def _import_dxf(p):
+    path = p.get("path", "")
+    sketch_ref = p.get("sketch", "")
+    if not path:
+        return {"error": "No file path provided."}
+    if not os.path.exists(path):
+        return {"error": f"File not found: {path}"}
+    design = _design()
+    root = design.rootComponent
+    if sketch_ref:
+        sketch = _find_sketch(root, sketch_ref)
+    else:
+        plane = root.xYConstructionPlane
+        sketch = root.sketches.add(plane)
+    import_mgr = app.importManager
+    dxf_options = import_mgr.createDXF2DImportOptions(path, sketch)
+    import_mgr.importToTarget2(dxf_options, sketch)
+    return {"imported_dxf": os.path.basename(path), "sketch": sketch.name}
+
+
+# ---- Enhanced Assembly ----
+
+def _set_joint_limits(root, p):
+    joint_name = p.get("joint", "")
+    joint = None
+    for i in range(root.joints.count):
+        j = root.joints.item(i)
+        if j.name == joint_name:
+            joint = j
+            break
+    if not joint:
+        return {"error": f"Joint '{joint_name}' not found."}
+    jm = joint.jointMotion
+    jtype = jm.jointType
+    min_val = float(p.get("min", 0))
+    max_val = float(p.get("max", 90))
+    if jtype == adsk.fusion.JointTypes.RevoluteJointType:
+        jm.rotationLimits.isMinimumValueEnabled = True
+        jm.rotationLimits.isMaximumValueEnabled = True
+        jm.rotationLimits.minimumValue = math.radians(min_val)
+        jm.rotationLimits.maximumValue = math.radians(max_val)
+    elif jtype == adsk.fusion.JointTypes.SliderJointType:
+        jm.slideLimits.isMinimumValueEnabled = True
+        jm.slideLimits.isMaximumValueEnabled = True
+        jm.slideLimits.minimumValue = min_val
+        jm.slideLimits.maximumValue = max_val
+    else:
+        return {"error": f"Limits not supported for joint type {jtype}."}
+    return {"joint_limits_set": joint_name, "min": min_val, "max": max_val}
+
+def _create_rigid_group(root, p):
+    group_name = p.get("name", "RigidGroup")
+    comp_names = p.get("components", [])
+    occs = adsk.core.ObjectCollection.create()
+    for cn in comp_names:
+        found = False
+        for i in range(root.occurrences.count):
+            occ = root.occurrences.item(i)
+            if occ.component.name == cn:
+                occs.add(occ)
+                found = True
+                break
+        if not found:
+            return {"error": f"Component '{cn}' not found."}
+    ri = root.features.rigidGroupFeatures.createInput(occs)
+    feat = root.features.rigidGroupFeatures.add(ri)
+    return {"rigid_group": feat.name, "components": comp_names}
+
+def _ground_component(root, p):
+    comp_name = p.get("component", "")
+    grounded = _to_bool(p.get("grounded", True))
+    for i in range(root.occurrences.count):
+        occ = root.occurrences.item(i)
+        if occ.component.name == comp_name:
+            occ.isGrounded = grounded
+            return {"component": comp_name, "grounded": grounded}
+    return {"error": f"Component '{comp_name}' not found."}
+
+def _get_bom(root, p):
+    design = _design()
+    bom = design.rootPart.parentDesign.bom
+    rows = []
+    for i in range(bom.bomRows.count):
+        row = bom.bomRows.item(i)
+        rows.append({
+            "item": row.itemNumber,
+            "name": row.component.name if row.component else "",
+            "quantity": row.itemQuantity,
+        })
+    return {"bom": rows}
+
+
+# ---- Enhanced Extrude ----
+
+def _extrude_to_face(root, p):
+    sketch = _resolve_sketch(root, p)
+    if sketch.profiles.count == 0:
+        return {"error": "No closed profile in sketch."}
+    pidx = min(int(p.get("profile_index", 0)), sketch.profiles.count - 1)
+    profile = sketch.profiles.item(pidx)
+    target_body = _find_body(root, p.get("target_body", 0))
+    target_face_idx = int(p.get("target_face", 0))
+    target_face = target_body.faces.item(target_face_idx)
+    operation = _op(p.get("operation", "new_body"))
+    ext_input = root.features.extrudeFeatures.createInput(profile, operation)
+    ext_input.setOneSideToExtent(target_face, adsk.fusion.ToEntityExtentDefinitionOptions.AlignToEntityExtentDefinitionOption)
+    feat = root.features.extrudeFeatures.add(ext_input)
+    return {"extruded_to_face": sketch.name, "bodies": root.bRepBodies.count}
+
+def _extrude_through_all(root, p):
+    sketch = _resolve_sketch(root, p)
+    if sketch.profiles.count == 0:
+        return {"error": "No closed profile in sketch."}
+    pidx = min(int(p.get("profile_index", 0)), sketch.profiles.count - 1)
+    profile = sketch.profiles.item(pidx)
+    operation = _op(p.get("operation", "new_body"))
+    is_symmetric = _to_bool(p.get("symmetric", False))
+    ext_input = root.features.extrudeFeatures.createInput(profile, operation)
+    ext_input.setAllExtent(is_symmetric)
+    feat = root.features.extrudeFeatures.add(ext_input)
+    return {"extruded_through_all": sketch.name, "bodies": root.bRepBodies.count}
+
+
+# ---- Construction Point ----
+
+def _add_construction_point(root, p):
+    point_type = p.get("type", "vertex").lower()
+    axes = root.constructionPoints
+    if point_type == "vertex":
+        body = _find_body(root, p.get("body", 0))
+        vertex = body.vertices.item(int(p.get("vertex_index", 0)))
+        pi = axes.createInput()
+        pi.setByVertex(vertex)
+        point = axes.add(pi)
+        return {"construction_point": point.name, "type": "vertex"}
+    elif point_type == "center":
+        body = _find_body(root, p.get("body", 0))
+        edge = body.edges.item(int(p.get("edge_index", 0)))
+        pi = axes.createInput()
+        pi.setByEdge(edge)
+        point = axes.add(pi)
+        return {"construction_point": point.name, "type": "center"}
+    return {"error": f"Unknown point type: {point_type}"}
+
+
+# ---- Design Data ----
+
+def _get_document_properties(design):
+    doc = app.activeDocument
+    props = doc.dataFile.properties if doc.dataFile else None
+    return {
+        "document_name": doc.name,
+        "design_type": str(design.designType),
+        "units": design.unitsManager.defaultLengthUnits,
+        "material_lib": design.activeMaterialLibrary.name if design.activeMaterialLibrary else "None",
+        "active_material": design.activeMaterial.name if design.activeMaterial else "None",
+    }
+
+def _get_units(design):
+    um = design.unitsManager
+    return {
+        "default_length_units": um.defaultLengthUnits,
+        "default_angle_units": um.defaultAngleUnits,
+        "default_mass_units": um.defaultMassUnits,
+    }
+
+
+# ---- Timeline Control ----
+
+def _timeline_roll_to(root, p):
+    design = _design()
+    timeline = design.timeline
+    index = int(p.get("index", timeline.count - 1))
+    if index < 0 or index >= timeline.count:
+        return {"error": f"Timeline index {index} out of range (0-{timeline.count-1})."}
+    timeline.item(index).rollTo()
+    return {"rolled_to": index, "timeline_count": timeline.count}
+
+def _suppress_feature(root, p):
+    design = _design()
+    timeline = design.timeline
+    index = int(p.get("index", 0))
+    if index < 0 or index >= timeline.count:
+        return {"error": f"Timeline index {index} out of range (0-{timeline.count-1})."}
+    timeline.item(index).isSuppressed = True
+    return {"suppressed": index}
+
+def _unsuppress_feature(root, p):
+    design = _design()
+    timeline = design.timeline
+    index = int(p.get("index", 0))
+    if index < 0 or index >= timeline.count:
+        return {"error": f"Timeline index {index} out of range (0-{timeline.count-1})."}
+    timeline.item(index).isSuppressed = False
+    return {"unsuppressed": index}
+
+
 # ---- Assembly / Joints ----
 
 def _create_component(root, p):
@@ -1611,6 +2012,49 @@ def _process_command(data: dict) -> dict:
             "save":                       lambda: _save_design(p),
             "save_as":                    lambda: _save_as(p),
             "export_obj":                 lambda: {"error": "OBJ export is not supported by the Fusion 360 API. Use STL, STEP, or 3MF instead."},
+
+            # ---- Surface Modeling ----
+            "patch_surface":              lambda: _patch_surface(root, p),
+            "stitch_surfaces":            lambda: _stitch_surfaces(root, p),
+            "trim_surface":               lambda: _trim_surface(root, p),
+            "extend_surface":             lambda: _extend_surface(root, p),
+            "offset_surface":             lambda: _offset_surface(root, p),
+            "delete_face":                lambda: _delete_face(root, p),
+            "replace_face":               lambda: _replace_face(root, p),
+            "thicken_surface":            lambda: _thicken_surface(root, p),
+
+            # ---- Enhanced Features ----
+            "split_face":                 lambda: _split_face(root, p),
+            "split_body":                 lambda: _split_body(root, p),
+            "create_rib":                 lambda: _create_rib(root, p),
+            "create_web":                 lambda: _create_web(root, p),
+            "variable_fillet":            lambda: _variable_fillet(root, p),
+            "emboss":                     lambda: _emboss(root, p),
+            "extrude_to_face":            lambda: _extrude_to_face(root, p),
+            "extrude_through_all":        lambda: _extrude_through_all(root, p),
+
+            # ---- Import ----
+            "import_step":                lambda: _import_step(p),
+            "import_mesh":                lambda: _import_mesh(p),
+            "import_dxf":                 lambda: _import_dxf(p),
+
+            # ---- Enhanced Assembly ----
+            "set_joint_limits":           lambda: _set_joint_limits(root, p),
+            "create_rigid_group":         lambda: _create_rigid_group(root, p),
+            "ground_component":           lambda: _ground_component(root, p),
+            "get_bom":                    lambda: _get_bom(root, p),
+
+            # ---- Construction ----
+            "add_construction_point":     lambda: _add_construction_point(root, p),
+
+            # ---- Design Data ----
+            "get_document_properties":    lambda: _get_document_properties(design),
+            "get_units":                  lambda: _get_units(design),
+
+            # ---- Timeline Control ----
+            "timeline_roll_to":           lambda: _timeline_roll_to(root, p),
+            "suppress_feature":           lambda: _suppress_feature(root, p),
+            "unsuppress_feature":         lambda: _unsuppress_feature(root, p),
         }
 
         if cmd in dispatch:

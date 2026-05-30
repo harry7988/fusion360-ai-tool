@@ -266,6 +266,128 @@ static class CommandDispatcher
                 await client.CallAndPrintAsync("execute_script", P(["code", string.Join(" ", a)]));
                 break;
 
+            // ---- Surface Modeling ----
+            case "patch":
+                await client.CallAndPrintAsync("patch_surface", P(["profile_index", I(a,0,0)]));
+                break;
+            case "stitch":
+                if (a.Length < 1) { Console.WriteLine("Usage: stitch <tool_body1> [tool_body2...]"); return 1; }
+                await client.CallAndPrintAsync("stitch_surfaces", P(["tool_bodies", a.ToList()]));
+                break;
+            case "trim-surface":
+                if (a.Length < 2) { Console.WriteLine("Usage: trim-surface <body> <cutting_body>"); return 1; }
+                await client.CallAndPrintAsync("trim_surface", P(["body", a[0], "cutting_body", a[1]]));
+                break;
+            case "extend-surface":
+                if (a.Length < 3) { Console.WriteLine("Usage: extend-surface <body> <face> <distance>"); return 1; }
+                await client.CallAndPrintAsync("extend_surface", P(["body", a[0], "face_index", int.Parse(a[1]), "distance", double.Parse(a[2])]));
+                break;
+            case "offset-surface":
+                if (a.Length < 2) { Console.WriteLine("Usage: offset-surface <body> <distance> [face_indices...]"); return 1; }
+                await client.CallAndPrintAsync("offset_surface", P(["body", a[0], "distance", double.Parse(a[1]), "face_indices", a[2..].Length > 0 ? a[2..].Select(int.Parse).ToList() : new List<int>{0}]));
+                break;
+            case "delete-face":
+                if (a.Length < 2) { Console.WriteLine("Usage: delete-face <body> <face_indices...>"); return 1; }
+                await client.CallAndPrintAsync("delete_face", P(["body", a[0], "face_indices", a[1..].Select(int.Parse).ToList()]));
+                break;
+            case "replace-face":
+                if (a.Length < 3) { Console.WriteLine("Usage: replace-face <body> <face> <replacement_body>"); return 1; }
+                await client.CallAndPrintAsync("replace_face", P(["body", a[0], "face_index", int.Parse(a[1]), "replacement_body", a[2]]));
+                break;
+            case "thicken-surface":
+                if (a.Length < 2) { Console.WriteLine("Usage: thicken-surface <body> <thickness>"); return 1; }
+                await client.CallAndPrintAsync("thicken_surface", P(["body", a[0], "thickness", double.Parse(a[1])]));
+                break;
+
+            // ---- Enhanced Features ----
+            case "split-face":
+                if (a.Length < 2) { Console.WriteLine("Usage: split-face <body> <face>"); return 1; }
+                await client.CallAndPrintAsync("split_face", P(["body", a[0], "face_index", int.Parse(a[1])]));
+                break;
+            case "split-body":
+                if (a.Length < 2) { Console.WriteLine("Usage: split-body <body> <cutting_body>"); return 1; }
+                await client.CallAndPrintAsync("split_body", P(["body", a[0], "cutting_body", a[1]]));
+                break;
+            case "rib":
+                await client.CallAndPrintAsync("create_rib", P(["thickness", D(a,0,0.5), "direction", I(a,1,0)]));
+                break;
+            case "web":
+                await client.CallAndPrintAsync("create_web", P(["thickness", D(a,0,0.5)]));
+                break;
+            case "variable-fillet":
+                if (a.Length < 3) { Console.WriteLine("Usage: variable-fillet <body> <start_radius> <end_radius> [edge_indices...]"); return 1; }
+                await client.CallAndPrintAsync("variable_fillet", P(["body", a[0], "start_radius", double.Parse(a[1]), "end_radius", double.Parse(a[2]), "edge_indices", a[3..].Length > 0 ? a[3..].Select(int.Parse).ToList() : new List<int>{0}]));
+                break;
+            case "emboss":
+                if (a.Length < 2) { Console.WriteLine("Usage: emboss <body> <depth>"); return 1; }
+                await client.CallAndPrintAsync("emboss", P(["body", a[0], "depth", double.Parse(a[1])]));
+                break;
+            case "extrude-to":
+                if (a.Length < 3) { Console.WriteLine("Usage: extrude-to <target_body> <target_face> [profile_index]"); return 1; }
+                await client.CallAndPrintAsync("extrude_to_face", P(["target_body", a[0], "target_face", int.Parse(a[1]), "profile_index", I(a,2,0)]));
+                break;
+            case "extrude-all":
+                await client.CallAndPrintAsync("extrude_through_all", P(["profile_index", I(a,0,0), "operation", S(a,1,"new_body")]));
+                break;
+
+            // ---- Import ----
+            case "import-step":
+                if (a.Length < 1) { Console.WriteLine("Usage: import-step <path>"); return 1; }
+                await client.CallAndPrintAsync("import_step", P(["path", a[0]]));
+                break;
+            case "import-mesh":
+                if (a.Length < 1) { Console.WriteLine("Usage: import-mesh <path> (STL/OBJ/3MF)"); return 1; }
+                await client.CallAndPrintAsync("import_mesh", P(["path", a[0]]));
+                break;
+            case "import-dxf":
+                if (a.Length < 1) { Console.WriteLine("Usage: import-dxf <path> [sketch]"); return 1; }
+                await client.CallAndPrintAsync("import_dxf", P(["path", a[0], "sketch", S(a,1,"")]));
+                break;
+
+            // ---- Enhanced Assembly ----
+            case "joint-limits":
+                if (a.Length < 3) { Console.WriteLine("Usage: joint-limits <joint_name> <min> <max>"); return 1; }
+                await client.CallAndPrintAsync("set_joint_limits", P(["joint", a[0], "min", double.Parse(a[1]), "max", double.Parse(a[2])]));
+                break;
+            case "rigid-group":
+                if (a.Length < 2) { Console.WriteLine("Usage: rigid-group <name> <comp1> [comp2...]"); return 1; }
+                await client.CallAndPrintAsync("create_rigid_group", P(["name", a[0], "components", a[1..].ToList()]));
+                break;
+            case "ground":
+                if (a.Length < 1) { Console.WriteLine("Usage: ground <component> [true|false]"); return 1; }
+                await client.CallAndPrintAsync("ground_component", P(["component", a[0], "grounded", S(a,1,"true")]));
+                break;
+            case "bom":
+                await client.CallAndPrintAsync("get_bom");
+                break;
+
+            // ---- Construction ----
+            case "point":
+                await client.CallAndPrintAsync("add_construction_point", P(["type", S(a,0,"vertex"), "body", S(a,1,"0"), "vertex_index", I(a,2,0)]));
+                break;
+
+            // ---- Design Data ----
+            case "doc-props":
+                await client.CallAndPrintAsync("get_document_properties");
+                break;
+            case "units":
+                await client.CallAndPrintAsync("get_units");
+                break;
+
+            // ---- Timeline Control ----
+            case "timeline-to":
+                if (a.Length < 1) { Console.WriteLine("Usage: timeline-to <index>"); return 1; }
+                await client.CallAndPrintAsync("timeline_roll_to", P(["index", int.Parse(a[0])]));
+                break;
+            case "suppress":
+                if (a.Length < 1) { Console.WriteLine("Usage: suppress <timeline_index>"); return 1; }
+                await client.CallAndPrintAsync("suppress_feature", P(["index", int.Parse(a[0])]));
+                break;
+            case "unsuppress":
+                if (a.Length < 1) { Console.WriteLine("Usage: unsuppress <timeline_index>"); return 1; }
+                await client.CallAndPrintAsync("unsuppress_feature", P(["index", int.Parse(a[0])]));
+                break;
+
             case "help":
             case "--help":
             case "-h":
@@ -413,6 +535,47 @@ static class CommandDispatcher
               export-3mf [path]               Export 3MF
               f3d [path]                      Export F3D
               screenshot [path] [w] [h]       Screenshot
+            Surface:
+              patch [profile]              Patch surface
+              stitch <bodies...>           Stitch surfaces
+              trim-surface <body> <cut>    Trim surface
+              extend-surface <b> <f> <d>   Extend surface
+              offset-surface <b> <d> [fs]  Offset surface
+              delete-face <b> <faces...>   Delete face
+              replace-face <b> <f> <rep>   Replace face
+              thicken-surface <b> <d>      Thicken surface
+
+            Enhanced:
+              split-face <body> <face>     Split face
+              split-body <body> <cut>      Split body
+              rib <thickness> [direction]  Create rib
+              web <thickness>              Create web
+              variable-fillet <b> <s> <e>  Variable fillet
+              emboss <body> <depth>        Emboss/deboss
+              extrude-to <b> <f> [prof]    Extrude to face
+              extrude-all [prof] [op]      Extrude through all
+
+            Import:
+              import-step <path>           Import STEP
+              import-mesh <path>           Import STL/OBJ/3MF
+              import-dxf <path> [sketch]   Import DXF
+
+            Assembly:
+              joint-limits <j> <min> <max> Set joint limits
+              rigid-group <n> <comps...>   Create rigid group
+              ground <comp> [true/false]   Ground component
+              bom                          Bill of materials
+
+            Construction:
+              point [type] [body] [idx]    Construction point
+
+            Design:
+              doc-props                    Document properties
+              units                        Design units
+              timeline-to <index>          Roll timeline
+              suppress <index>             Suppress feature
+              unsuppress <index>           Unsuppress feature
+
 
             History:
               undo [steps]                    Undo

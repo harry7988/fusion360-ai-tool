@@ -186,6 +186,35 @@ bin/fusion screenshot ~/Desktop/shot.png
 | `thicken <thickness>` | Thicken sketch / 加厚 |
 | `draft <body> <face> <angle>` | Draft face / 拔模 |
 | `thread <body> <face>` | Add thread / 添加螺纹 |
+| `extrude-to <body> <face> [prof]` | Extrude to face / 拉伸到面 |
+| `extrude-all [prof] [op]` | Extrude through all / 贯穿拉伸 |
+| `variable-fillet <body> <start> <end> [edges]` | Variable radius fillet / 变半径圆角 |
+| `emboss <body> <depth>` | Emboss/deboss / 浮雕/凹雕 |
+
+### Surface Modeling / 曲面建模
+
+| Command / 命令 | Description / 说明 |
+|------|------|
+| `patch [profile]` | Patch surface / 创建补片面 |
+| `stitch <bodies...>` | Stitch surfaces / 缝合曲面 |
+| `trim-surface <body> <cut>` | Trim surface / 修剪曲面 |
+| `extend-surface <body> <face> <dist>` | Extend surface / 延伸曲面 |
+| `offset-surface <body> <dist> [faces]` | Offset surface / 偏移曲面 |
+| `delete-face <body> <faces...>` | Delete face / 删除面 |
+| `replace-face <body> <face> <rep>` | Replace face / 替换面 |
+| `thicken-surface <body> <thickness>` | Thicken surface / 加厚曲面 |
+| `split-face <body> <face>` | Split face / 分割面 |
+| `split-body <body> <cut>` | Split body / 分割实体 |
+| `rib <thickness> [direction]` | Create rib / 创建加强筋 |
+| `web <thickness>` | Create web / 创建腹板 |
+
+### Import / 导入
+
+| Command / 命令 | Description / 说明 |
+|------|------|
+| `import-step <path>` | Import STEP file / 导入 STEP 文件 |
+| `import-mesh <path>` | Import STL/OBJ/3MF / 导入网格文件 |
+| `import-dxf <path> [sketch]` | Import DXF / 导入 DXF 文件 |
 
 ### Assembly / 装配
 
@@ -195,6 +224,10 @@ bin/fusion screenshot ~/Desktop/shot.png
 | `move-to-comp <body> <comp>` | Move body to component / 移动实体到组件 |
 | `joint <c1> <c2> <type>` | Create joint / 创建关节 |
 | `as-built <c1> <c2> <type>` | Create as-built joint / 创建就位关节 |
+| `joint-limits <joint> <min> <max>` | Set joint limits / 设置关节限制 |
+| `rigid-group <name> <comps...>` | Create rigid group / 创建刚性组 |
+| `ground <component> [true/false]` | Ground component / 固定组件 |
+| `bom` | Bill of materials / 物料清单 |
 
 ### Body Management / 实体管理
 
@@ -211,6 +244,7 @@ bin/fusion screenshot ~/Desktop/shot.png
 |------|------|
 | `plane [base] [offset]` | Add construction plane / 添加构造平面 |
 | `axis [type] [body]` | Add construction axis / 添加构造轴 |
+| `point [type] [body] [idx]` | Add construction point / 添加构造点 |
 
 ### Parameters / 参数
 
@@ -237,6 +271,21 @@ bin/fusion screenshot ~/Desktop/shot.png
 | `export-3mf [path]` | Export as 3MF / 导出 3MF |
 | `f3d [path]` | Export as F3D / 导出 F3D |
 | `screenshot [path] [w] [h]` | Capture screenshot / 截图 |
+
+### Design Data / 设计数据
+
+| Command / 命令 | Description / 说明 |
+|------|------|
+| `doc-props` | Document properties / 文档属性 |
+| `units` | Design units / 设计单位 |
+
+### Timeline / 时间线
+
+| Command / 命令 | Description / 说明 |
+|------|------|
+| `timeline-to <index>` | Roll timeline to / 时间线滚动到 |
+| `suppress <index>` | Suppress feature / 抑制特征 |
+| `unsuppress <index>` | Unsuppress feature / 取消抑制 |
 
 ### History & Script / 历史 & 脚本
 
