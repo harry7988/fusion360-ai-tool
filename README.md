@@ -13,24 +13,35 @@ Terminal (fusion)  ────HTTP────▶  Fusion 360 Python Add-in (Fu
 
 ## Prerequisites / 前置条件
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - Autodesk Fusion 360
-- [FusionMCP add-in](https://github.com/user/fusion-mcp) installed and running
+- macOS ARM (Apple Silicon), macOS Intel, Windows, or Linux
 
 ## Quick Start / 快速开始
 
+No compilation needed. Clone and run directly:
+无需编译，克隆后直接使用：
+
 ```bash
-# Build / 构建
-dotnet build
+# Clone / 克隆
+git clone git@github.com:harry7988/fusion360-ai-tool.git
+cd fusion360-ai-tool
 
-# Run in dev mode / 开发模式运行
-dotnet run -- status
-dotnet run -- bodies
+# Install the FusionMCP add-in into Fusion 360 / 安装 FusionMCP 插件到 Fusion 360
+bin/fusion install
 
-# AOT native publish (no .NET runtime needed) / AOT 原生发布（无需 .NET 运行时）
-dotnet publish -c Release -r osx-arm64
-./bin/Release/net10.0/osx-arm64/publish/fusion status
+# Verify connection (Fusion 360 must be running with add-in enabled)
+# 验证连接（Fusion 360 必须运行且插件已启用）
+bin/fusion status
+
+# Start designing! / 开始设计！
+bin/fusion sketch XY MyPart
+bin/fusion circle 0 0 5
+bin/fusion finish-sketch
+bin/fusion extrude 2
 ```
+
+A pre-built native binary (`bin/fusion`, ~5.5MB) is included in the repo. No .NET SDK required.
+仓库已附带原生二进制文件（`bin/fusion`，约5.5MB），无需安装 .NET SDK。
 
 ## Install Add-in / 安装插件
 
@@ -38,11 +49,11 @@ The CLI needs the FusionMCP add-in running inside Fusion 360. Use the `install` 
 CLI 需要在 Fusion 360 内部运行 FusionMCP 插件。使用 `install` 命令一键部署：
 
 ```bash
-# Install from a local fusion-mcp directory / 从本地 fusion-mcp 目录安装
-dotnet run -- install ../fusion-mcp
+# Install (auto-detects bundled plugin) / 安装（自动识别内置插件）
+bin/fusion install
 
-# Or after AOT publish / AOT 发布后
-fusion install ../fusion-mcp
+# Or specify a custom fusion-mcp path / 或指定自定义 fusion-mcp 路径
+bin/fusion install /path/to/fusion-mcp
 ```
 
 After installation, follow the prompts to enable the add-in in Fusion 360:
@@ -68,33 +79,33 @@ Start the FusionMCP add-in in Fusion 360, then run in terminal:
 
 ```bash
 # Check connection / 检查连接
-fusion status
+bin/fusion status
 
 # View design info / 查看设计信息
-fusion info
-fusion bodies
-fusion faces 0
-fusion edges 0
-fusion timeline
+bin/fusion info
+bin/fusion bodies
+bin/fusion faces 0
+bin/fusion edges 0
+bin/fusion timeline
 
 # Create sketch & extrude / 创建草图并拉伸
-fusion sketch XY MySketch
-fusion circle 0 0 5
-fusion finish-sketch
-fusion extrude 2.0
+bin/fusion sketch XY MySketch
+bin/fusion circle 0 0 5
+bin/fusion finish-sketch
+bin/fusion extrude 2.0
 
 # Fillet edges / 倒圆角
-fusion fillet 0 0.5 0 1 2 3
+bin/fusion fillet 0 0.5 0 1 2 3
 
 # Undo / 撤销
-fusion undo 2
+bin/fusion undo 2
 
 # Export / 导出
-fusion stl
-fusion step
+bin/fusion stl
+bin/fusion step
 
 # Screenshot / 截图
-fusion screenshot ~/Desktop/shot.png
+bin/fusion screenshot ~/Desktop/shot.png
 ```
 
 ## All Commands / 全部命令
@@ -263,11 +274,16 @@ fusion360-ai-tool/
 - **.NET 10** + AOT native compilation / AOT 原生编译
 - **Zero dependencies** — no third-party libraries / 零外部依赖
 - Manual JSON serialization — fully AOT compatible / 手动 JSON 序列化，完全 AOT 兼容
-- Produces a ~5.5MB native binary, no runtime required / 产物约 5.5MB，无需运行时
+- Pre-built native binary (~5.5MB), no runtime required / 附带原生二进制文件，无需运行时
 
-## Cross-Platform Publish / 跨平台发布
+## Cross-Platform Build (Optional) / 跨平台构建（可选）
+
+Only needed if you want to build from source, e.g. for a platform not yet included in the repo:
+仅当需要从源码构建时才需要以下步骤：
 
 ```bash
+cd FusionCli
+
 # macOS ARM (Apple Silicon)
 dotnet publish -c Release -r osx-arm64
 
@@ -286,32 +302,30 @@ dotnet publish -c Release -r linux-x64
 If you are an AI agent (e.g. Claude Code) setting up this tool for a user, follow these steps in order:
 如果你是 AI Agent（如 Claude Code），请按以下步骤为用户配置：
 
-### 1. Clone & Build / 克隆并构建
+### 1. Clone / 克隆
 
 ```bash
 git clone git@github.com:harry7988/fusion360-ai-tool.git
-cd fusion360-ai-tool/FusionCli
-dotnet build
+cd fusion360-ai-tool
 ```
+
+No build step needed — a pre-built binary is included at `bin/fusion`.
+无需构建——仓库已附带预编译二进制文件 `bin/fusion`。
 
 ### 2. Install FusionMCP Plugin / 安装 FusionMCP 插件
 
-The `install` command deploys the bundled plugin to Fusion 360's add-in directory. No external `fusion-mcp` repo needed — everything is included:
-`install` 命令将仓库内附带的插件部署到 Fusion 360 的插件目录，无需额外下载：
+The `install` command deploys the bundled plugin to Fusion 360's add-in directory:
+`install` 命令将仓库内附带的插件部署到 Fusion 360 的插件目录：
 
 ```bash
-# From the FusionCli directory / 在 FusionCli 目录下
-dotnet run -- install
-
-# Or after AOT publish / 或 AOT 发布后
-./bin/Release/net10.0/osx-arm64/publish/fusion install
+bin/fusion install
 ```
 
-If the bundled plugin is not found, specify the path explicitly:
+If the bundled plugin is not found, specify the path manually:
 如果内置插件未找到，手动指定路径：
 
 ```bash
-dotnet run -- install /path/to/fusion-mcp
+bin/fusion install /path/to/fusion-mcp
 ```
 
 ### 3. Enable Plugin in Fusion 360 / 在 Fusion 360 中启用插件
@@ -347,7 +361,7 @@ After installation, Claude Code will automatically activate the skill when the u
 ### 5. Verify / 验证
 
 ```bash
-dotnet run -- status
+bin/fusion status
 # Expected output: Connected: Fusion MCP bridge running
 ```
 
