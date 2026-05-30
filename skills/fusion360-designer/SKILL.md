@@ -57,11 +57,14 @@ fusion text <str> [x] [y] [h]
 ### 3D features
 ```bash
 fusion extrude <dist> [new_body|join|cut] [profile_index]
+fusion extrude-to <target_body> <target_face> [profile_index]
+fusion extrude-all [profile_index] [operation]
 fusion revolve <angle> [profile_index] [axis_index] [operation]
 fusion loft <idx1> <idx2> ...
 fusion sweep <profile_idx> <path_idx> [operation]
 fusion shell <body> <thickness> [face_indices...]
 fusion fillet <body> <radius> [edge_indices...]
+fusion variable-fillet <body> <start_radius> <end_radius> [edge_indices...]
 fusion chamfer <body> <distance> [edge_indices...]
 fusion hole <body> <face> <x> <y> <dia> <depth> [--type simple|counterbore|countersink]
 fusion mirror-body <body> [plane]
@@ -75,6 +78,30 @@ fusion press-pull <body> <face> <distance>
 fusion thicken <thickness>
 fusion draft <body> <face> <angle>
 fusion thread <body> <face>
+fusion emboss <body> <depth>
+fusion rib <thickness> [direction]
+fusion web <thickness>
+fusion split-face <body> <face>
+fusion split-body <body> <cutting_body>
+```
+
+### Surface modeling
+```bash
+fusion patch [profile_index]
+fusion stitch <body1> [body2...]
+fusion trim-surface <body> <cutting_body>
+fusion extend-surface <body> <face> <distance>
+fusion offset-surface <body> <distance> [face_indices...]
+fusion delete-face <body> <face_indices...>
+fusion replace-face <body> <face> <replacement_body>
+fusion thicken-surface <body> <thickness>
+```
+
+### Import
+```bash
+fusion import-step <path>
+fusion import-mesh <path>  (STL/OBJ/3MF)
+fusion import-dxf <path> [sketch]
 ```
 
 ### Info & inspection
