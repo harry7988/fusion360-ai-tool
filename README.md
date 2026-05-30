@@ -32,6 +32,35 @@ dotnet publish -c Release -r osx-arm64
 ./bin/Release/net10.0/osx-arm64/publish/fusion status
 ```
 
+## Install Add-in / 安装插件
+
+The CLI needs the FusionMCP add-in running inside Fusion 360. Use the `install` command to deploy it:
+CLI 需要在 Fusion 360 内部运行 FusionMCP 插件。使用 `install` 命令一键部署：
+
+```bash
+# Install from a local fusion-mcp directory / 从本地 fusion-mcp 目录安装
+dotnet run -- install ../fusion-mcp
+
+# Or after AOT publish / AOT 发布后
+fusion install ../fusion-mcp
+```
+
+After installation, follow the prompts to enable the add-in in Fusion 360:
+安装完成后，按提示在 Fusion 360 中启用插件：
+
+1. Open Fusion 360 / 打开 Fusion 360
+2. Press **Shift+S** to open the Scripts and Add-Ins panel / 按 **Shift+S** 打开脚本和插件面板
+3. Switch to the **Add-Ins** tab / 切换到 **Add-Ins** 标签页
+4. Click **+** to add the FusionMCP folder / 点击 **+** 添加 FusionMCP 文件夹
+5. Select **FusionMCP** and click **Run** / 选中 **FusionMCP** 并点击 **Run**
+6. Wait for the popup: "FusionMCP bridge is running on port 7432" / 等待弹出 "FusionMCP bridge is running on port 7432"
+
+Then verify connection / 然后验证连接：
+
+```bash
+fusion status
+```
+
 ## Usage / 使用方法
 
 Start the FusionMCP add-in in Fusion 360, then run in terminal:

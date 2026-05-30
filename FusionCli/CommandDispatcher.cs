@@ -272,6 +272,9 @@ static class CommandDispatcher
                 PrintHelp();
                 break;
 
+            case "install":
+                return RunInstall(a);
+
             default:
                 Console.WriteLine($"Unknown command: {cmd}");
                 Console.WriteLine("Run 'fusion help' for available commands.");
@@ -311,6 +314,10 @@ static class CommandDispatcher
             Fusion 360 CLI - Control Fusion 360 from the command line
 
             Usage: fusion <command> [args]
+
+            Setup:
+              install [source]                 Install FusionMCP add-in to Fusion 360
+                                               source: path to fusion-mcp directory (default: ../fusion-mcp)
 
             Status & Info:
               status                          Check connection
@@ -414,5 +421,90 @@ static class CommandDispatcher
               save-as <name> [desc]           Save as
               script <code>                   Execute script
             """);
+    }
+
+    static int RunInstall(string[] a)
+    {
+        // Find fusion-mcp source directory
+        var exeDir = AppDomain.CurrentDomain.BaseDirectory;
+        var defaultSource = Path.GetFullPath(Path.Combine(exeDir, "..", "..", "..", "..", "fusion-mcp"));
+        var source = a.Length > 0 ? a[0] : defaultSource;
+
+        if (!Directory.Exists(source))
+        {
+            // Try resolving relative to current working directory
+            source = Path.GetFullPath(source);
+            if (!Directory.Exists(source))
+            {
+                Console.WriteLine($"Error: fusion-mcp directory not found at: {source}");
+                Console.WriteLine();
+                Console.WriteLine("Usage: fusion install [path-to-fusion-mcp]");
+                Console.WriteLine("  Example: fusion install ../fusion-mcp");
+                return 1;
+            }
+        }
+
+        var srcFile = Path.Combine(source, "FusionMCP.py");
+        var srcManifest = Path.Combine(source, "FusionMCP.manifest");
+        if (!File.Exists(srcFile))
+        {
+            Console.WriteLine($"Error: FusionMCP.py not found in: {source}");
+            return 1;
+        }
+
+        // Determine Fusion 360 add-ins directory
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string[] candidateDirs =
+        [
+            Path.Combine(home, "Library", "Application Support", "Autodesk", "Autodesk Fusion 360", "API", "AddIns"),
+            Path.Combine(home, "AppData", "Roaming", "Autodesk", "Autodesk Fusion 360", "API", "AddIns"),
+        ];
+
+        string? addinsDir = null;
+        foreach (var dir in candidateDirs)
+        {
+            if (Directory.Exists(dir)) { addinsDir = dir; break; }
+        }
+
+        if (addinsDir == null)
+        {
+            Console.WriteLine("Error: Could not find Fusion 360 add-ins directory.");
+            Console.WriteLine("Searched:");
+            foreach (var dir in candidateDirs)
+                Console.WriteLine($"  {dir}");
+            Console.WriteLine();
+            Console.WriteLine("Please specify manually:");
+            Console.WriteLine("  Open Fusion 360 → press Shift+S → go to ADD-INS tab → note the add-ins folder path");
+            return 1;
+        }
+
+        var destDir = Path.Combine(addinsDir, "FusionMCP");
+        Directory.CreateDirectory(destDir);
+
+        // Copy files
+        var filesToCopy = new[] { "FusionMCP.py", "FusionMCP.manifest" };
+        foreach (var file in filesToCopy)
+        {
+            var src = Path.Combine(source, file);
+            if (File.Exists(src))
+            {
+                File.Copy(src, Path.Combine(destDir, file), overwrite: true);
+                Console.WriteLine($"  Copied: {file}");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"Installed to: {destDir}");
+        Console.WriteLine();
+        Console.WriteLine("Next steps:");
+        Console.WriteLine("  1. Open Autodesk Fusion 360");
+        Console.WriteLine("  2. Press Shift+S to open the Scripts and Add-Ins panel");
+        Console.WriteLine("  3. Switch to the Add-Ins tab");
+        Console.WriteLine("  4. Click the '+' (Add) button and select the FusionMCP folder");
+        Console.WriteLine("  5. Select FusionMCP from the list and click Run");
+        Console.WriteLine("  6. You should see a popup: 'FusionMCP bridge is running on port 7432'");
+        Console.WriteLine();
+        Console.WriteLine("Verify: fusion status");
+        return 0;
     }
 }
