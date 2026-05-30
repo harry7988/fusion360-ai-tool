@@ -277,9 +277,9 @@ MIT
 
 ## Acknowledgments / 致谢
 
-The Fusion 360 add-in (`plugin/FusionMCP.py`) is derived from the [fusion-mcp](https://github.com/anthropics/fusion-mcp) project. It acts as an HTTP bridge running inside Fusion 360, exposing the full Fusion API as JSON commands over `localhost:7432`. This CLI communicates with that bridge to provide a native command-line experience.
+The Fusion 360 add-in (`plugin/FusionMCP.py`) is derived from the [fusion-mcp](https://github.com/Anonimus124/fusion-mcp) project. It acts as an HTTP bridge running inside Fusion 360, exposing the full Fusion API as JSON commands over `localhost:7432`. This CLI communicates with that bridge to provide a native command-line experience.
 
-Fusion 360 插件（`plugin/FusionMCP.py`）源自 [fusion-mcp](https://github.com/anthropics/fusion-mcp) 项目。该插件作为 HTTP 桥接运行在 Fusion 360 内部，将完整的 Fusion API 以 JSON 命令方式暴露在 `localhost:7432`。本 CLI 通过与该桥接通信，提供原生命令行体验。
+Fusion 360 插件（`plugin/FusionMCP.py`）源自 [fusion-mcp](https://github.com/Anonimus124/fusion-mcp) 项目。该插件作为 HTTP 桥接运行在 Fusion 360 内部，将完整的 Fusion API 以 JSON 命令方式暴露在 `localhost:7432`。本 CLI 通过与该桥接通信，提供原生命令行体验。
 
 Key contributions from the original project / 原项目的主要贡献：
 - Complete Fusion 360 API command dispatcher / 完整的 Fusion 360 API 命令分发器
