@@ -240,12 +240,22 @@ fusion screenshot ~/Desktop/shot.png
 ## Project Structure / 项目结构
 
 ```
-FusionCli/
-├── FusionCli.csproj         # .NET 10 project config (AOT) / 项目配置
-├── Program.cs               # Entry point / 入口点
-├── FusionClient.cs          # HTTP client (AOT-safe JSON) / HTTP 客户端
-├── CommandDispatcher.cs     # 70+ command dispatch / 命令分发
-└── JsonContext.cs            # JSON source generator / JSON 源生成器
+fusion360-ai-tool/
+├── FusionCli/
+│   ├── FusionCli.csproj         # .NET 10 project config (AOT) / 项目配置
+│   ├── Program.cs               # Entry point / 入口点
+│   ├── FusionClient.cs          # HTTP client (AOT-safe JSON) / HTTP 客户端
+│   ├── CommandDispatcher.cs     # 70+ command dispatch / 命令分发
+│   └── JsonContext.cs            # JSON source generator / JSON 源生成器
+├── plugin/
+│   ├── FusionMCP.py              # Fusion 360 add-in (Python) / Fusion 360 插件
+│   └── FusionMCP.manifest        # Add-in manifest / 插件清单
+├── skills/
+│   └── fusion360-designer/
+│       ├── SKILL.md              # Claude Code skill / Claude Code 技能
+│       └── references/
+│           └── quick-reference.md
+└── README.md
 ```
 
 ## Tech Stack / 技术栈
@@ -269,6 +279,76 @@ dotnet publish -c Release -r win-x64
 
 # Linux 64-bit
 dotnet publish -c Release -r linux-x64
+```
+
+## Setup for AI Agents / AI Agent 安装指南
+
+If you are an AI agent (e.g. Claude Code) setting up this tool for a user, follow these steps in order:
+如果你是 AI Agent（如 Claude Code），请按以下步骤为用户配置：
+
+### 1. Clone & Build / 克隆并构建
+
+```bash
+git clone git@github.com:harry7988/fusion360-ai-tool.git
+cd fusion360-ai-tool/FusionCli
+dotnet build
+```
+
+### 2. Install FusionMCP Plugin / 安装 FusionMCP 插件
+
+The `install` command deploys the bundled plugin to Fusion 360's add-in directory. No external `fusion-mcp` repo needed — everything is included:
+`install` 命令将仓库内附带的插件部署到 Fusion 360 的插件目录，无需额外下载：
+
+```bash
+# From the FusionCli directory / 在 FusionCli 目录下
+dotnet run -- install
+
+# Or after AOT publish / 或 AOT 发布后
+./bin/Release/net10.0/osx-arm64/publish/fusion install
+```
+
+If the bundled plugin is not found, specify the path explicitly:
+如果内置插件未找到，手动指定路径：
+
+```bash
+dotnet run -- install /path/to/fusion-mcp
+```
+
+### 3. Enable Plugin in Fusion 360 / 在 Fusion 360 中启用插件
+
+After `install`, instruct the user to:
+`install` 完成后，提示用户：
+
+1. Open Fusion 360 / 打开 Fusion 360
+2. Press **Shift+S** / 按 **Shift+S**
+3. Switch to **Add-Ins** tab / 切换到 **Add-Ins** 标签页
+4. Click **+** → select the `FusionMCP` folder / 点击 **+** → 选择 `FusionMCP` 文件夹
+5. Select **FusionMCP** → click **Run** / 选中 **FusionMCP** → 点击 **Run**
+6. Wait for popup: "FusionMCP bridge is running on port 7432" / 等待弹窗确认
+
+### 4. Install Claude Code Skill / 安装 Claude Code 技能
+
+To enable Claude Code to design parts in Fusion 360, install the bundled skill:
+要让 Claude Code 能在 Fusion 360 中设计零件，安装附带的技能：
+
+```bash
+# Copy the skill to Claude Code's skills directory / 拷贝到 Claude Code 技能目录
+cp -r skills/fusion360-designer ~/.claude/skills/
+```
+
+After installation, Claude Code will automatically activate the skill when the user mentions Fusion 360, 3D modeling, or CAD design. The skill provides:
+安装后，当用户提到 Fusion 360、3D 建模或 CAD 设计时，Claude Code 会自动激活该技能：
+
+- Full design workflow guidance / 完整设计工作流指引
+- All 70+ CLI commands reference / 全部 70+ 命令参考
+- Common design patterns (hollow box, cutouts, patterns) / 常见设计模式
+- Troubleshooting tips / 故障排除提示
+
+### 5. Verify / 验证
+
+```bash
+dotnet run -- status
+# Expected output: Connected: Fusion MCP bridge running
 ```
 
 ## License / 许可证

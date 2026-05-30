@@ -1,6 +1,6 @@
 ## Build results / 构建结果
-bin/
-obj/
+FusionCli/bin/
+FusionCli/obj/
 publish/
 
 ## IDE
