@@ -1,0 +1,24 @@
+## Build results / 构建结果
+bin/
+obj/
+publish/
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Python cache / Python 缓存
+__pycache__/
+*.pyc
+
+## Personal files / 个人资料
+CLAUDE.md
+Tasks.md
+*.local.json
