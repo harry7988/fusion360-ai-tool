@@ -425,30 +425,25 @@ static class CommandDispatcher
 
     static int RunInstall(string[] a)
     {
-        // Find fusion-mcp source directory
+        // Default: use bundled plugin/ directory from the repo
         var exeDir = AppDomain.CurrentDomain.BaseDirectory;
-        var defaultSource = Path.GetFullPath(Path.Combine(exeDir, "..", "..", "..", "..", "fusion-mcp"));
-        var source = a.Length > 0 ? a[0] : defaultSource;
+        var repoRoot = Path.GetFullPath(Path.Combine(exeDir, "..", "..", "..", ".."));
+        var defaultSource = Path.Combine(repoRoot, "plugin");
 
-        if (!Directory.Exists(source))
-        {
-            // Try resolving relative to current working directory
-            source = Path.GetFullPath(source);
-            if (!Directory.Exists(source))
-            {
-                Console.WriteLine($"Error: fusion-mcp directory not found at: {source}");
-                Console.WriteLine();
-                Console.WriteLine("Usage: fusion install [path-to-fusion-mcp]");
-                Console.WriteLine("  Example: fusion install ../fusion-mcp");
-                return 1;
-            }
-        }
+        // If bundled plugin not found, try sibling fusion-mcp directory
+        if (!File.Exists(Path.Combine(defaultSource, "FusionMCP.py")))
+            defaultSource = Path.GetFullPath(Path.Combine(repoRoot, "..", "fusion-mcp"));
 
-        var srcFile = Path.Combine(source, "FusionMCP.py");
-        var srcManifest = Path.Combine(source, "FusionMCP.manifest");
-        if (!File.Exists(srcFile))
+        var source = a.Length > 0 ? Path.GetFullPath(a[0]) : defaultSource;
+
+        if (!File.Exists(Path.Combine(source, "FusionMCP.py")))
         {
-            Console.WriteLine($"Error: FusionMCP.py not found in: {source}");
+            Console.WriteLine($"Error: FusionMCP.py not found at: {source}");
+            Console.WriteLine();
+            Console.WriteLine("Usage: fusion install [path-to-fusion-mcp]");
+            Console.WriteLine("  Example: fusion install ../fusion-mcp");
+            Console.WriteLine();
+            Console.WriteLine("By default, installs from the bundled plugin/ directory in this repo.");
             return 1;
         }
 
